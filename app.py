@@ -140,12 +140,14 @@ if st.button("Generar Informe"):
     pdf.multi_cell(0, 10, f"Fuerza sísmica sobre elemento no estructural: {round(fp, 2)} kN")
     for tipo in ["Cielorrasos", "Muros divisorios", "Fachadas"]:
         pdf.multi_cell(0, 10, f"{tipo}: {sugerencia_ensamble(zona_sismica, tipo)}")
-    pdf.output(buffer)
+    pdf_bytes = pdf.output(dest='S').encode('latin1')
+    buffer.write(pdf_bytes)
     buffer.seek(0)
 
     st.download_button(
         label="📄 Descargar PDF",
-        data=buffer.getvalue(),
+        data=buffer,
         file_name="informe_predimensionamiento.pdf",
         mime="application/pdf"
     )
+
