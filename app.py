@@ -28,60 +28,69 @@ def calcular_viga(long_luz):
     b = h / 2
     return h, b
 
-# ... (continúa todo el contenido del código anterior sin cambios hasta justo antes de crear el PDF) ...
+def calcular_columna(Pu, fc, ancho_aferente):
+    return Pu / (0.35 * fc * ancho_aferente)
 
-    resultados = {
-        "Peso Total (kN)": f"{peso_total:.2f}",
-        "Altura de Viga (m)": f"{h_viga:.2f}",
-        "Ancho de Viga (m)": f"{b_viga:.2f}",
-        "Area de Columna (m2)": f"{area_col:.4f}",
-        "Fuerza Sismica Total (kN)": f"{V_sismica:.2f}",
-        "Numero de Gradas": num_gradas,
-        "Longitud de Escalera (m)": f"{long_escalera:.2f}",
-        "Carga Sismica Elemento No Estructural (Fp)": f"{carga_fp:.2f} kN",
-        "Tipo de Sistema Estructural": tipo_sistema,
-        "Material Principal": material_estructural,
-        "Ensamble cielorrasos": ensambles["Cielorrasos"],
-        "Ensamble muros divisorios": ensambles["Muros divisorios"],
-        "Ensamble fachadas": ensambles["Fachadas"],
-        "Distancia mínima a vecinos (m)": normativas["Distancia mínima a vecinos (m)"],
-        "Recubrimiento mínimo vigas (cm)": normativas["Recubrimiento mínimo vigas (cm)"],
-        "Recubrimiento mínimo columnas por fuego (cm)": normativas["Recubrimiento mínimo columnas por fuego (cm)"],
-        "Tipos de sistema estructural en mampostería": normativas["Tipos de sistema estructural en mampostería"]
-    }
+def calcular_cortante_sismica(W, Cs):
+    return Cs * W
 
-    # ---------- SUGERENCIAS DE MEJORAS FUTURAS ----------
-    mejoras = [
-        "Integración con modelos BIM (Revit, ArchiCAD) para leer geometrías directamente.",
-        "Compatibilidad con bases de datos ambientales para análisis ACV.",
-        "Exportación de resultados a formatos DXF o IFC.",
-        "Módulo de comparación entre alternativas de diseño.",
-        "Simulación de comportamiento estructural con recomendaciones normativas dinámicas.",
-        "Visualización 3D básica del predimensionamiento en la app."
-    ]
+def calcular_distribucion_sismica(Vb, num_pisos):
+    pesos = np.linspace(1, 2, num_pisos)
+    pesos /= pesos.sum()
+    return Vb * pesos
 
-    pdf = PDF()
-    pdf.add_page()
-    pdf.set_font("Arial", size=11)
+def calcular_escalares(contrahuella=0.17, huella=0.28, altura_total=3):
+    num_gradas = round(altura_total / contrahuella)
+    return num_gradas, num_gradas * huella
 
-    for k, v in resultados.items():
-        if isinstance(v, (list, tuple)):
-            pdf.multi_cell(0, 8, f"{k}:\n" + "\n".join(f" - {i}" for i in v))
-        else:
-            pdf.multi_cell(0, 8, f"{k}: {v}")
-        pdf.ln(2)
+def calcular_fp(ap, Sds, Wp):
+    return 0.4 * ap * Sds * Wp
 
-    pdf.ln(5)
-    pdf.set_font("Arial", "B", 12)
-    pdf.multi_cell(0, 10, "Sugerencias de mejoras futuras para arquitectos:")
-    pdf.set_font("Arial", size=11)
-    for item in mejoras:
-        pdf.multi_cell(0, 8, f"- {item}")
+def sugerencia_ensamble(zona, tipo):
+    if tipo == "Cielorrasos":
+        return {
+            "Baja": "Suspension ligera o anclaje flexible.",
+            "Moderada": "Perfil metálico con fijación resiliente.",
+            "Alta": "Perfil metálico reforzado con elementos de anclaje sísmico."
+        }[zona]
+    elif tipo == "Muros divisorios":
+        return {
+            "Baja": "Bloques ligeros con refuerzo ocasional.",
+            "Moderada": "Bloques anclados a elementos estructurales.",
+            "Alta": "Muros anclados con refuerzo horizontal cada 60 cm y conexión a losa."
+        }[zona]
+    elif tipo == "Fachadas":
+        return {
+            "Baja": "Fijación convencional por gravedad.",
+            "Moderada": "Fijación mecánica con doble punto de anclaje.",
+            "Alta": "Fijación mecánica con refuerzo cruzado, junta flexible."
+        }[zona]
+    else:
+        return "Consultar norma NSR-10 capítulo E para detalles específicos."
 
-    pdf.output("informe_predimensionamiento.pdf", 'F')
+# ---------- INTERFAZ DE USUARIO ----------
+st.set_page_config(page_title="Predimensionamiento Estructural", layout="centered")
+st.title("Predimensionamiento Automatizado")
+st.markdown("Sistema en revisión - resultados orientativos basados en la NSR-10")
 
-    with open("informe_predimensionamiento.pdf", "rb") as f:
-        st.download_button("Descargar Informe en PDF", f, file_name="informe_predimensionamiento.pdf")
+with st.expander("Datos Generales del Proyecto"):
+    altura_total = st.number_input("Altura total del proyecto (m)", value=12.0)
+    long_luz = st.number_input("Luz libre de la viga (m)", value=5.0)
+    peso_total = st.number_input("Peso total estimado (kN)", value=1200.0)
+    Pu = st.number_input("Carga axial Pu (kN)", value=250.0)
+    fc = st.number_input("Resistencia del concreto fc (MPa)", value=21.0)
+    ancho_aferente = st.number_input("Ancho aferente de columna (m)", value=0.5)
+    num_pisos = st.slider("Número de pisos", 1, 10, 4)
 
-    os.remove(grafico_path)
+with st.expander("Datos Sísmicos y del Material"):
+    zona_sismica = st.selectbox("Zona de amenaza sísmica", ["Baja", "Moderada", "Alta"])
+    tipo_sistema = st.selectbox("Tipo de sistema estructural", ["Porticado", "Mampostería", "Dual", "Mixto"])
+    material_estructural = st.selectbox("Material principal", ["Concreto reforzado", "Acero estructural", "Mampostería"], index=0)
+    ap = st.number_input("Coeficiente de amplificación ap", value=1.0)
+    Sds = st.number_input("Aceleración espectral Sds", value=0.9)
+    Wp = st.number_input("Peso del elemento no estructural (kN)", value=2.0)
 
+if st.button("Generar Informe"):
+    st.success("Procesando datos... espera unos segundos")
+    # Aquí se colocará el resto del script original, que genera el PDF y los resultados.
+    st.rerun()
