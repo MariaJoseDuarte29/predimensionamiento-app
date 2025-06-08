@@ -56,14 +56,14 @@ def generar_informe_pdf(datos, resultados, grafico_path):
     pdf.cell(0, 10, "1. Datos del Proyecto", ln=True)
     pdf.set_font("Arial", size=11)
     for k, v in datos.items():
-        pdf.cell(0, 8, f"{k}: {v}", ln=True)
+        pdf.cell(0, 8, f"{k}: {str(v)}", ln=True)
 
     pdf.ln(4)
     pdf.set_font("Arial", style='B', size=12)
     pdf.cell(0, 10, "2. Resultados de Predimensionamiento", ln=True)
     pdf.set_font("Arial", size=11)
     for k, v in resultados.items():
-        pdf.cell(0, 8, f"{k}: {v}", ln=True)
+        pdf.cell(0, 8, f"{k}: {str(v)}", ln=True)
 
     if grafico_path:
         pdf.ln(6)
@@ -76,7 +76,7 @@ def generar_informe_pdf(datos, resultados, grafico_path):
     pdf.set_font("Arial", style='B', size=12)
     pdf.cell(0, 10, "4. Notas Normativas (NSR-10)", ln=True)
     pdf.set_font("Arial", size=10)
-    pdf.multi_cell(0, 7, "Este informe automatizado aplica recomendaciones de la NSR-10:\n- Vigas: h ≈ L/10, b ≈ h/2.\n- Columnas: A >= Pu / (0.35·fc).\n- Fuerza sismica: V = Cs·W, distribuida por piso.\n- Elementos no estructurales: Fp = 0.4·ap·Sds·Wp.\n- Escaleras: Contrahuella ~17cm, Huella ~28cm.\nRevisar con ingenieria estructural detallada antes de ejecucion.")
+    pdf.multi_cell(0, 7, "Este informe automatizado aplica recomendaciones de la NSR-10:\n- Vigas: h ≈ L/10, b ≈ h/2.\n- Columnas: A >= Pu / (0.35*fc).\n- Fuerza sismica: V = Cs*W, distribuida por piso.\n- Elementos no estructurales: Fp = 0.4*ap*Sds*Wp.\n- Escaleras: Contrahuella ~17cm, Huella ~28cm.\nRevisar con ingenieria estructural detallada antes de ejecucion.")
 
     return pdf
 
