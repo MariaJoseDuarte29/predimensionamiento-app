@@ -2,6 +2,7 @@ import streamlit as st
 from fpdf import FPDF
 import matplotlib.pyplot as plt
 import io
+import os
 
 # ---------- FUNCIONES DE CÁLCULO ----------
 def calcular_viga(long_luz):
@@ -35,7 +36,7 @@ class PDF(FPDF):
         self.set_font('Arial', 'I', 8)
         self.cell(0, 10, f'Página {self.page_no()}', align='C')
 
-def generar_informe_pdf(datos, resultados, grafico_bytes):
+def generar_informe_pdf(datos, resultados, grafico_path):
     pdf = PDF()
     pdf.add_page()
 
@@ -52,11 +53,11 @@ def generar_informe_pdf(datos, resultados, grafico_bytes):
     for k, v in resultados.items():
         pdf.cell(0, 8, f"{k}: {v}", ln=True)
 
-    if grafico_bytes:
+    if grafico_path:
         pdf.ln(6)
         pdf.set_font("Arial", style='B', size=12)
         pdf.cell(0, 10, "3. Diagrama de Escalera", ln=True)
-        pdf.image(grafico_bytes, x=10, y=pdf.get_y()+5, w=180)
+        pdf.image(grafico_path, x=10, y=pdf.get_y()+5, w=180)
         pdf.ln(85)
 
     pdf.ln(6)
@@ -98,7 +99,7 @@ if st.button("Calcular y Generar Informe"):
     num_gradas, long_escalera = calcular_escalares(altura_total=altura_piso)
     carga_fp = calcular_fp(ap, Sds, Wp)
 
-    # Generar gráfico simple de escalera
+    # Generar gráfico simple de escalera y guardarlo como imagen
     fig, ax = plt.subplots()
     for i in range(num_gradas):
         ax.plot([0, (i+1)*0.28], [i*0.17, i*0.17], color='black')
@@ -107,9 +108,9 @@ if st.button("Calcular y Generar Informe"):
     ax.set_xlabel("Huella (m)")
     ax.set_ylabel("Altura (m)")
     ax.axis("equal")
-    buf = io.BytesIO()
-    plt.savefig(buf, format="png")
-    buf.seek(0)
+    grafico_path = "escalera_temp.png"
+    plt.savefig(grafico_path)
+    plt.close()
 
     datos = {
         "Nombre del Proyecto": nombre_proyecto,
@@ -130,7 +131,12 @@ if st.button("Calcular y Generar Informe"):
         "Carga Sísmica Elemento No Estructural (Fp)": f"{carga_fp:.2f} kN"
     }
 
-    pdf = generar_informe_pdf(datos, resultados, buf)
+    pdf = generar_informe_pdf(datos, resultados, grafico_path)
     pdf.output("informe_predimensionamiento.pdf")
+
+    # Mostrar botón para descarga del informe
     with open("informe_predimensionamiento.pdf", "rb") as f:
         st.download_button("Descargar Informe en PDF", f, file_name="informe_predimensionamiento.pdf")
+
+    # Eliminar imagen temporal
+    os.remove(grafico_path)
