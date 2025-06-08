@@ -1,5 +1,7 @@
 import streamlit as st
 from fpdf import FPDF
+import matplotlib.pyplot as plt
+import io
 
 # ---------- FUNCIONES DE CÁLCULO ----------
 def calcular_viga(long_luz):
@@ -33,7 +35,7 @@ class PDF(FPDF):
         self.set_font('Arial', 'I', 8)
         self.cell(0, 10, f'Página {self.page_no()}', align='C')
 
-def generar_informe_pdf(datos, resultados):
+def generar_informe_pdf(datos, resultados, grafico_bytes):
     pdf = PDF()
     pdf.add_page()
 
@@ -46,14 +48,20 @@ def generar_informe_pdf(datos, resultados):
     pdf.ln(4)
     pdf.set_font("Arial", style='B', size=12)
     pdf.cell(0, 10, "2. Resultados de Predimensionamiento", ln=True)
-
     pdf.set_font("Arial", size=11)
     for k, v in resultados.items():
         pdf.cell(0, 8, f"{k}: {v}", ln=True)
 
+    if grafico_bytes:
+        pdf.ln(6)
+        pdf.set_font("Arial", style='B', size=12)
+        pdf.cell(0, 10, "3. Diagrama de Escalera", ln=True)
+        pdf.image(grafico_bytes, x=10, y=pdf.get_y()+5, w=180)
+        pdf.ln(85)
+
     pdf.ln(6)
     pdf.set_font("Arial", style='B', size=12)
-    pdf.cell(0, 10, "3. Notas Normativas (NSR-10)", ln=True)
+    pdf.cell(0, 10, "4. Notas Normativas (NSR-10)", ln=True)
     pdf.set_font("Arial", size=10)
     pdf.multi_cell(0, 7, "Los resultados presentados siguen los lineamientos básicos de la Norma NSR-10.\n- Vigas: Se sugiere altura mínima h = L/10 y ancho b = h/2.\n- Columnas: Área mínima A = Pu / (0.35·f'c).\n- Cortante sísmico: V = Cs · W.\n- Elementos no estructurales: Fp = 0.4·ap·Sds·Wp.\n- Escaleras: Contrahuella ~17cm, Huella ~28cm.\nEstos cálculos son de aproximación inicial y deben verificarse con diseño estructural detallado.")
 
@@ -90,6 +98,19 @@ if st.button("Calcular y Generar Informe"):
     num_gradas, long_escalera = calcular_escalares(altura_total=altura_piso)
     carga_fp = calcular_fp(ap, Sds, Wp)
 
+    # Generar gráfico simple de escalera
+    fig, ax = plt.subplots()
+    for i in range(num_gradas):
+        ax.plot([0, (i+1)*0.28], [i*0.17, i*0.17], color='black')
+        ax.plot([(i+1)*0.28, (i+1)*0.28], [i*0.17, (i+1)*0.17], color='black')
+    ax.set_title("Diagrama de Escalera")
+    ax.set_xlabel("Huella (m)")
+    ax.set_ylabel("Altura (m)")
+    ax.axis("equal")
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    buf.seek(0)
+
     datos = {
         "Nombre del Proyecto": nombre_proyecto,
         "Ubicación": ubicacion,
@@ -109,7 +130,7 @@ if st.button("Calcular y Generar Informe"):
         "Carga Sísmica Elemento No Estructural (Fp)": f"{carga_fp:.2f} kN"
     }
 
-    pdf = generar_informe_pdf(datos, resultados)
+    pdf = generar_informe_pdf(datos, resultados, buf)
     pdf.output("informe_predimensionamiento.pdf")
     with open("informe_predimensionamiento.pdf", "rb") as f:
         st.download_button("Descargar Informe en PDF", f, file_name="informe_predimensionamiento.pdf")
