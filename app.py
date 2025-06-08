@@ -92,5 +92,23 @@ with st.expander("Datos Sísmicos y del Material"):
 
 if st.button("Generar Informe"):
     st.success("Procesando datos... espera unos segundos")
-    # Aquí se colocará el resto del script original, que genera el PDF y los resultados.
-    st.rerun()
+    h_viga, b_viga = calcular_viga(long_luz)
+    area_columna = calcular_columna(Pu, fc, ancho_aferente)
+    Vb = calcular_cortante_sismica(peso_total, 0.1)
+    distrib_sismo = calcular_distribucion_sismica(Vb, num_pisos)
+    gradas, longitud_escalera = calcular_escalares(altura_total=altura_total)
+    fp = calcular_fp(ap, Sds, Wp)
+
+    st.write("**Altura recomendada de viga:**", round(h_viga, 2), "m")
+    st.write("**Ancho recomendado de viga:**", round(b_viga, 2), "m")
+    st.write("**Área mínima de columna:**", round(area_columna, 3), "m²")
+    st.write("**Cortante sísmico basal Vb:**", round(Vb, 2), "kN")
+    st.write("**Distribución sísmica por piso:**", distrib_sismo.round(2).tolist())
+    st.write("**Número de gradas:**", gradas)
+    st.write("**Longitud total de la escalera:**", round(longitud_escalera, 2), "m")
+    st.write("**Fuerza sísmica sobre elemento no estructural:**", round(fp, 2), "kN")
+
+    st.write("---")
+    st.write("**Sugerencias por zona sísmica:**")
+    for tipo in ["Cielorrasos", "Muros divisorios", "Fachadas"]:
+        st.write(f"- {tipo}: {sugerencia_ensamble(zona_sismica, tipo)}")
