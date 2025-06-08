@@ -11,8 +11,8 @@ def calcular_viga(long_luz):
     b = h / 2
     return h, b
 
-def calcular_columna(Pu, fc):
-    return Pu / (0.35 * fc)
+def calcular_columna(Pu, fc, ancho_aferente):
+    return Pu / (0.35 * fc * ancho_aferente)
 
 def calcular_cortante_sismica(W, Cs):
     return Cs * W
@@ -76,12 +76,14 @@ def generar_informe_pdf(datos, resultados, grafico_path):
     pdf.set_font("Arial", style='B', size=12)
     pdf.cell(0, 10, "4. Notas Normativas (NSR-10)", ln=True)
     pdf.set_font("Arial", size=10)
-    pdf.multi_cell(0, 7, "Este informe automatizado aplica recomendaciones de la NSR-10:\n- Vigas: h ~ L/10, b ~ h/2.\n- Columnas: A >= Pu / (0.35*fc).\n- Fuerza sismica: V = Cs*W, distribuida por piso.\n- Elementos no estructurales: Fp = 0.4*ap*Sds*Wp.\n- Escaleras: Contrahuella ~17cm, Huella ~28cm.\nRevisar con ingenieria estructural detallada antes de ejecucion.")
+    pdf.multi_cell(0, 7, "Este informe automatizado aplica recomendaciones de la NSR-10:\n- Vigas: h ~ L/10, b ~ h/2.\n- Columnas: A >= Pu / (0.35·fc·ancho aferente).\n- Fuerza sismica: V = Cs·W, distribuida por piso.\n- Elementos no estructurales: Fp = 0.4·ap·Sds·Wp.\n- Escaleras: Contrahuella ~17cm, Huella ~28cm.\nRevisar con ingenieria estructural detallada antes de ejecucion.")
 
     return pdf
 
 # ---------- INTERFAZ STREAMLIT RESTAURADA ----------
 st.title("Predimensionamiento Estructural - Plataforma Academica")
+
+st.markdown("**Desarrollado por la Arq. Maria Jose Duarte Torres**")
 
 st.header("Datos del Proyecto")
 nombre_proyecto = st.text_input("Nombre del Proyecto")
@@ -89,6 +91,7 @@ ubicacion = st.text_input("Ubicacion")
 zona_sismica = st.selectbox("Zona de amenaza sismica", ["Baja", "Moderada", "Alta"])
 clase_uso = st.selectbox("Clase de uso", ["I", "II", "III", "IV"])
 tipo_suelo = st.selectbox("Tipo de suelo", ["A", "B", "C", "D"])
+tipo_sistema = st.selectbox("Tipo de sistema estructural", ["Concreto reforzado", "Mamposteria estructural", "Sistema dual", "Combinado"])
 
 st.header("Cargas y Geometria")
 carga_muerta = st.number_input("Carga muerta (kN/m2)", min_value=0.0)
@@ -98,6 +101,7 @@ num_pisos = st.number_input("Numero de pisos", min_value=1, step=1)
 long_luz = st.number_input("Longitud de luz de viga (m)", min_value=1.0, value=5.0)
 Pu = st.number_input("Carga axial en columna (kN)", min_value=1.0, value=200.0)
 fc = st.number_input("Resistencia del concreto fc (MPa)", min_value=14.0, value=21.0)
+ancho_aferente = st.number_input("Ancho aferente para columna (m)", min_value=0.1, value=2.0)
 Cs = st.number_input("Coeficiente sismico Cs", min_value=0.05, value=0.1)
 ap = st.number_input("Coeficiente ap del elemento no estructural", min_value=0.5, value=1.0)
 Sds = st.number_input("Aceleracion espectral Sds", min_value=0.1, value=0.6)
@@ -106,7 +110,7 @@ Wp = st.number_input("Peso del elemento no estructural (kN)", min_value=1.0, val
 if st.button("Calcular y Generar Informe"):
     peso_total = (carga_muerta + carga_viva) * altura_piso * num_pisos
     h_viga, b_viga = calcular_viga(long_luz)
-    area_col = calcular_columna(Pu, fc)
+    area_col = calcular_columna(Pu, fc, ancho_aferente)
     V_sismica = calcular_cortante_sismica(peso_total, Cs)
     distribucion = calcular_distribucion_sismica(V_sismica, num_pisos)
     num_gradas, long_escalera = calcular_escalares(altura_total=altura_piso)
@@ -136,14 +140,15 @@ if st.button("Calcular y Generar Informe"):
         "Ubicacion": ubicacion,
         "Zona Sismica": zona_sismica,
         "Clase de Uso": clase_uso,
-        "Tipo de Suelo": tipo_suelo
+        "Tipo de Suelo": tipo_suelo,
+        "Sistema Estructural": tipo_sistema
     }
 
     resultados = {
         "Peso Total (kN)": f"{peso_total:.2f}",
         "Altura de Viga (m)": f"{h_viga:.2f}",
         "Ancho de Viga (m)": f"{b_viga:.2f}",
-        "Area de Columna (cm2)": f"{area_col*10000:.2f}",
+        "Area de Columna (m2)": f"{area_col:.4f}",
         "Fuerza Sismica Total (kN)": f"{V_sismica:.2f}",
         "Numero de Gradas": num_gradas,
         "Longitud de Escalera (m)": f"{long_escalera:.2f}",
