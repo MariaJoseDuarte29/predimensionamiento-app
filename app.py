@@ -1,3 +1,4 @@
+
 import streamlit as st
 from fpdf import FPDF
 import matplotlib.pyplot as plt
@@ -99,21 +100,32 @@ if st.button("Generar Informe"):
     gradas, longitud_escalera = calcular_escalares(altura_total=altura_total)
     fp = calcular_fp(ap, Sds, Wp)
 
-    st.write("**Altura recomendada de viga:**", round(h_viga, 2), "m")
-    st.write("**Ancho recomendado de viga:**", round(b_viga, 2), "m")
-    st.write("**Área mínima de columna:**", round(area_columna, 3), "m²")
-    st.write("**Cortante sísmico basal Vb:**", round(Vb, 2), "kN")
-    st.write("**Distribución sísmica por piso:**", distrib_sismo.round(2).tolist())
-    st.write("**Número de gradas:**", gradas)
-    st.write("**Longitud total de la escalera:**", round(longitud_escalera, 2), "m")
-    st.write("**Fuerza sísmica sobre elemento no estructural:**", round(fp, 2), "kN")
+    st.subheader("Vigas")
+    st.write(f"Altura recomendada: **{round(h_viga, 2)} m**")
+    st.write(f"Ancho recomendado: **{round(b_viga, 2)} m**")
+    st.info("Recomendación NSR-10: Recubrimiento mínimo de concreto según exposición: 2.5 a 4 cm. Aumentar si se ubica en zona de amenaza sísmica alta.")
 
-    st.write("---")
-    st.write("**Sugerencias por zona sísmica:**")
+    st.subheader("Columnas")
+    st.write(f"Área mínima requerida: **{round(area_columna, 3)} m²**")
+    st.info("Recomendación NSR-10: Protección contra fuego según tabla 6.1 y capítulo D. Recubrimiento mínimo 4 cm en zona alta.")
+
+    st.subheader("Cortante sísmico y distribución")
+    st.write(f"Cortante sísmico basal Vb: **{round(Vb, 2)} kN**")
+    st.write(f"Distribución por piso: {distrib_sismo.round(2).tolist()}")
+
+    st.subheader("Escaleras")
+    st.write(f"Número de gradas: **{gradas}**")
+    st.write(f"Longitud total: **{round(longitud_escalera, 2)} m**")
+
+    st.subheader("Elementos no estructurales")
+    st.write(f"Fuerza sísmica sobre elemento: **{round(fp, 2)} kN**")
+    st.markdown("**Sugerencias por zona sísmica:**")
     for tipo in ["Cielorrasos", "Muros divisorios", "Fachadas"]:
-        st.write(f"- {tipo}: {sugerencia_ensamble(zona_sismica, tipo)}")
+        st.write(f"- **{tipo}**: {sugerencia_ensamble(zona_sismica, tipo)}")
 
-    # ----- DESCARGA DE PDF OPCIONAL -----
+    st.markdown("---")
+    st.markdown("**¿Deseas descargar el informe completo como PDF?**")
+
     if st.button("Descargar informe en PDF"):
         pdf = PDF()
         pdf.add_page()
