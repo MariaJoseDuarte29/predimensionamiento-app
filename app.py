@@ -112,3 +112,29 @@ if st.button("Generar Informe"):
     st.write("**Sugerencias por zona sísmica:**")
     for tipo in ["Cielorrasos", "Muros divisorios", "Fachadas"]:
         st.write(f"- {tipo}: {sugerencia_ensamble(zona_sismica, tipo)}")
+
+    # ----- DESCARGA DE PDF OPCIONAL -----
+    if st.button("Descargar informe en PDF"):
+        pdf = PDF()
+        pdf.add_page()
+        pdf.set_font("Arial", size=12)
+        pdf.multi_cell(0, 10, f"Altura recomendada de viga: {round(h_viga, 2)} m")
+        pdf.multi_cell(0, 10, f"Ancho recomendado de viga: {round(b_viga, 2)} m")
+        pdf.multi_cell(0, 10, f"Área mínima de columna: {round(area_columna, 3)} m²")
+        pdf.multi_cell(0, 10, f"Cortante sísmico basal Vb: {round(Vb, 2)} kN")
+        pdf.multi_cell(0, 10, f"Distribución sísmica por piso: {distrib_sismo.round(2).tolist()}")
+        pdf.multi_cell(0, 10, f"Número de gradas: {gradas}")
+        pdf.multi_cell(0, 10, f"Longitud total de la escalera: {round(longitud_escalera, 2)} m")
+        pdf.multi_cell(0, 10, f"Fuerza sísmica sobre elemento no estructural: {round(fp, 2)} kN")
+
+        for tipo in ["Cielorrasos", "Muros divisorios", "Fachadas"]:
+            pdf.multi_cell(0, 10, f"{tipo}: {sugerencia_ensamble(zona_sismica, tipo)}")
+
+        buffer = io.BytesIO()
+        pdf.output(buffer)
+        st.download_button(
+            label="📄 Descargar PDF",
+            data=buffer.getvalue(),
+            file_name="informe_predimensionamiento.pdf",
+            mime="application/pdf"
+        )
