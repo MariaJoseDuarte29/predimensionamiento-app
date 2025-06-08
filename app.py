@@ -3,42 +3,54 @@ from fpdf import FPDF
 import matplotlib.pyplot as plt
 import io
 import os
+import numpy as np
 
 # ---------- FUNCIONES DE CÁLCULO ----------
 def calcular_viga(long_luz):
-    h = long_luz / 10  # Altura mínima (m)
-    b = h / 2  # Ancho mínimo (m)
+    h = long_luz / 10
+    b = h / 2
     return h, b
 
 def calcular_columna(Pu, fc):
-    area_min = Pu / (0.35 * fc)
-    return area_min
+    return Pu / (0.35 * fc)
 
 def calcular_cortante_sismica(W, Cs):
     return Cs * W
 
+def calcular_distribucion_sismica(Vb, num_pisos):
+    pesos = np.linspace(1, 2, num_pisos)
+    pesos /= pesos.sum()
+    return Vb * pesos
+
 def calcular_escalares(contrahuella=0.17, huella=0.28, altura_total=3):
     num_gradas = round(altura_total / contrahuella)
-    long_total = num_gradas * huella
-    return num_gradas, long_total
+    return num_gradas, num_gradas * huella
 
 def calcular_fp(ap, Sds, Wp):
     return 0.4 * ap * Sds * Wp
 
 class PDF(FPDF):
     def header(self):
+        self.set_fill_color(255, 192, 203)
+        self.rect(0, 0, 210, 20, 'F')
         self.set_font('Arial', 'B', 16)
+        self.set_text_color(0)
         self.cell(0, 10, 'Informe de Predimensionamiento Estructural', ln=True, align='C')
         self.ln(5)
 
     def footer(self):
-        self.set_y(-15)
+        self.set_y(-20)
         self.set_font('Arial', 'I', 8)
+        self.set_text_color(100)
+        self.cell(0, 10, 'Documento automatizado - Arq. María José Duarte Torres', ln=True, align='C')
         self.cell(0, 10, f'Página {self.page_no()}', align='C')
 
 def generar_informe_pdf(datos, resultados, grafico_path):
     pdf = PDF()
     pdf.add_page()
+    pdf.set_font("Arial", size=11)
+    pdf.set_fill_color(255, 240, 245)
+    pdf.set_text_color(0)
 
     pdf.set_font("Arial", style='B', size=12)
     pdf.cell(0, 10, "1. Datos del Proyecto", ln=True)
@@ -56,19 +68,27 @@ def generar_informe_pdf(datos, resultados, grafico_path):
     if grafico_path:
         pdf.ln(6)
         pdf.set_font("Arial", style='B', size=12)
-        pdf.cell(0, 10, "3. Diagrama de Escalera", ln=True)
+        pdf.cell(0, 10, "3. Diagramas", ln=True)
         pdf.image(grafico_path, x=10, y=pdf.get_y()+5, w=180)
-        pdf.ln(85)
+        pdf.ln(90)
 
     pdf.ln(6)
     pdf.set_font("Arial", style='B', size=12)
     pdf.cell(0, 10, "4. Notas Normativas (NSR-10)", ln=True)
     pdf.set_font("Arial", size=10)
-    pdf.multi_cell(0, 7, "Los resultados presentados siguen los lineamientos básicos de la Norma NSR-10.\n- Vigas: Se sugiere altura mínima h = L/10 y ancho b = h/2.\n- Columnas: Área mínima A = Pu / (0.35·f'c).\n- Cortante sísmico: V = Cs · W.\n- Elementos no estructurales: Fp = 0.4·ap·Sds·Wp.\n- Escaleras: Contrahuella ~17cm, Huella ~28cm.\nEstos cálculos son de aproximación inicial y deben verificarse con diseño estructural detallado.")
+    pdf.multi_cell(0, 7, "Este informe automatizado aplica recomendaciones de la NSR-10:\n- Vigas: h ≈ L/10, b ≈ h/2.\n- Columnas: A ≥ Pu / (0.35·f'c).\n- Fuerza sísmica: V = Cs·W, distribuida por piso.\n- Elementos no estructurales: Fp = 0.4·ap·Sds·Wp.\n- Escaleras: Contrahuella ~17cm, Huella ~28cm.\nRevisar con ingeniería estructural detallada antes de ejecución.")
 
     return pdf
 
 # ---------- INTERFAZ STREAMLIT ----------
+st.markdown("""
+    <style>
+    .stApp {
+        background-color: #ffe6f0;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("Predimensionamiento Estructural - Plataforma Académica")
 
 st.header("Datos del Proyecto")
@@ -96,19 +116,27 @@ if st.button("Calcular y Generar Informe"):
     h_viga, b_viga = calcular_viga(long_luz)
     area_col = calcular_columna(Pu, fc)
     V_sismica = calcular_cortante_sismica(peso_total, Cs)
+    distribucion = calcular_distribucion_sismica(V_sismica, num_pisos)
     num_gradas, long_escalera = calcular_escalares(altura_total=altura_piso)
     carga_fp = calcular_fp(ap, Sds, Wp)
 
-    # Generar gráfico simple de escalera y guardarlo como imagen
-    fig, ax = plt.subplots()
-    for i in range(num_gradas):
-        ax.plot([0, (i+1)*0.28], [i*0.17, i*0.17], color='black')
-        ax.plot([(i+1)*0.28, (i+1)*0.28], [i*0.17, (i+1)*0.17], color='black')
-    ax.set_title("Diagrama de Escalera")
-    ax.set_xlabel("Huella (m)")
-    ax.set_ylabel("Altura (m)")
-    ax.axis("equal")
-    grafico_path = "escalera_temp.png"
+    # Gráfico combinado
+    fig, axs = plt.subplots(2, 1, figsize=(6, 8))
+
+    axs[0].barh(range(num_gradas), [(i+1)*0.28 for i in range(num_gradas)], height=0.15, color='gray')
+    axs[0].set_title("Diagrama de Escalera")
+    axs[0].invert_yaxis()
+    axs[0].set_xlabel("Huella (m)")
+    axs[0].set_ylabel("Grada")
+
+    pisos = [f"Piso {i+1}" for i in range(num_pisos)]
+    axs[1].bar(pisos, distribucion[::-1], color='#ff69b4')
+    axs[1].set_title("Distribución de Fuerza Sísmica por Piso")
+    axs[1].set_ylabel("Fuerza (kN)")
+    axs[1].set_xticklabels(pisos, rotation=45)
+
+    grafico_path = "diagrama_temp.png"
+    plt.tight_layout()
     plt.savefig(grafico_path)
     plt.close()
 
@@ -134,9 +162,7 @@ if st.button("Calcular y Generar Informe"):
     pdf = generar_informe_pdf(datos, resultados, grafico_path)
     pdf.output("informe_predimensionamiento.pdf")
 
-    # Mostrar botón para descarga del informe
     with open("informe_predimensionamiento.pdf", "rb") as f:
         st.download_button("Descargar Informe en PDF", f, file_name="informe_predimensionamiento.pdf")
 
-    # Eliminar imagen temporal
     os.remove(grafico_path)
