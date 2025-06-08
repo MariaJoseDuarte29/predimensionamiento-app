@@ -1,4 +1,3 @@
-
 import streamlit as st
 from fpdf import FPDF
 import matplotlib.pyplot as plt
@@ -72,6 +71,7 @@ def sugerencia_ensamble(zona, tipo):
 # ---------- INTERFAZ DE USUARIO ----------
 st.set_page_config(page_title="Predimensionamiento Estructural", layout="centered")
 st.title("Predimensionamiento Automatizado")
+st.markdown("**Arq. María José Duarte Torres**")
 st.markdown("Sistema en revisión - resultados orientativos basados en la NSR-10")
 
 with st.expander("Datos Generales del Proyecto"):
